@@ -25,30 +25,21 @@ package webber
 import (
 	"fmt"
 	"net/http"
-//	"io/ioutil"
-//	"encoding/json"
 )
 
-type MethodHandler map[string]WebHandler
-
-// AppServer is a webserver intended to support web applications
+// AppServer is a webserver intended to support web applications by providing both a file server and an
+// Api Server
 type AppServer struct {
 	Config *ServerConfig
 	FileServerInst* FileServer
 	Handlers map[string]WebHandler
 }
 
-// NewAppServer creates a new appserver with configuration information supplied by a file.  Will
-// also create a FileServer that handles any paths not handled by the api server
+// NewAppServer creates a new appserver with configuration information supplied by a ServerConfig object.  Will
+// also create a FileServer that handles any paths not handled by the api server, if a wwwroot is specified
 //
 // Parameters:
-//	configFileName string : path to a file on the server to pull configuraiton information from.
-//	                        If empty string, then the default of "file_server_config.json" will be used
-//
-//		configuration parameters:
-//		root :  relative path from the executable to the start of the file root
-//		apibase : path prefix for all handlers
-//		DefaultFile : If no path is provided, this is the file returns (e.g. index.html)
+//	config *ServerConfig : struct with configuration information for the server
 //
 // Returns:
 //	*AppServer : the app server created
@@ -56,9 +47,13 @@ type AppServer struct {
 func NewAppServer(config *ServerConfig) *AppServer {
 	f := new(AppServer)
 
+	// set our config, then see if we need to create a FileServer
 	f.Config = config
-	f.FileServerInst = NewFileServer("/", f.Config.WWWRoot, f.Config.DefaultFile)
+	if len(f.Config.WWWRoot) > 0 {
+		f.FileServerInst = NewFileServer(f.Config.FileBase, f.Config.WWWRoot, f.Config.DefaultFile)
+	}
 
+	// initialize our map of handlers
 	f.Handlers = make(map[string]WebHandler)
 	return f
 }
@@ -77,7 +72,7 @@ func (h AppServer) Name() string {
 	return "AppServer"
 }
 
-// GetBasePath returns the base path of the server (AppServers don't have base paths)
+// BasePath returns the base path of the server (AppServers don't have base paths)
 // they start at the root and have other handlers set underneath them
 //
 // Parmaeters: 
@@ -90,7 +85,7 @@ func (h AppServer) BasePath() string {
 	return h.Config.ApiBase
 }
 
-// Handler - the base handler for the AppServer.
+// Handler - the base handler for the AppServer.  Our hptt server will call this directly
 //
 func (h AppServer) Handler (w http.ResponseWriter, r *http.Request) {
 	wasHandled := false
@@ -104,19 +99,20 @@ func (h AppServer) Handler (w http.ResponseWriter, r *http.Request) {
 		fmt.Println("appServer handler path=", urlPath)
 		
 		for p := range h.Handlers {
-			fmt.Println("...checking ", p)
 			if len(urlPath) >= len(p) &&	urlPath[:len(p)] == p {
-				fmt.Println("...found it")
 				wasHandled = true
 				phf := h.Handlers[p]
-				fmt.Println("...is type ",phf.Name())
 				DispatchMethod(phf, w, r)
 			} 
 		}
 	}
 	if !wasHandled {
 		// not specific handler, assume it's a file
-		DispatchMethod(h.FileServerInst, w, r)
+		if h.FileServerInst != nil {
+			DispatchMethod(h.FileServerInst, w, r)
+		} else {
+			http.Error(w, "File not Found", http.StatusNotFound)
+		}
 	}
 
 }

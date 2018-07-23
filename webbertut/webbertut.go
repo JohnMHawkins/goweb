@@ -75,14 +75,12 @@ func (h AuthServer) BasePath() string {
 }
 
 func (h AuthServer) Handler ( w http.ResponseWriter, r *http.Request) { 
-	fmt.Println("Auth server has base path of ", h.basePath)
 	apiPath := r.URL.Path[len(h.basePath):]
 	fmt.Println("AuthServer Handler  called for ", apiPath)
 	webber.DispatchMethod(h, w, r);
 }
 
 func (h AuthServer) HandleGet (w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Get called", r.URL.Path)
 	apiPath := r.URL.Path[len(h.basePath):]
 	fmt.Println("AuthServer handling ", apiPath)
 
@@ -105,7 +103,6 @@ func (h AuthServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 
 
 func (h AuthServer) HandlePost (w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Auth server handle post...")
 	parseErr := r.ParseForm()
 	if parseErr != nil {
 		fmt.Println("error parsing login form: %s", parseErr)
@@ -139,11 +136,11 @@ func main() {
 	config := webber.LoadConfig("config.json")
 
 	// create an App Server
-	//as := webber.NewAppServer(config)
+	as := webber.NewAppServer(config)
 
 	// or
-	defaultConfig := webber.DefaultConfig()
-	as := webber.NewAppServer(defaultConfig)
+	//defaultConfig := webber.DefaultConfig()
+	//as := webber.NewAppServer(defaultConfig)
 
 	// create our auth handler and assign it to <apibase>/auth
 	auths := NewAuthServer(config.ApiBase + "/auth")

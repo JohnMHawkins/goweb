@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"io/ioutil"	
-	//"encoding/json"
 	"path"
 )
 
@@ -68,7 +67,7 @@ func (h FileServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			w.Write(body)
 		} else {
-			http.Error(w, "File not Fount", http.StatusNotFound)
+			http.Error(w, "File not Found", http.StatusNotFound)
 		}
 
 	}
@@ -79,5 +78,6 @@ func (h FileServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 func (h FileServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 
 	// todo:  add uploader support
+
 }
 

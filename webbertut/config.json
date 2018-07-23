@@ -3,5 +3,5 @@
     "WWWRoot":"wwwroot",
     "DefaultFile":"index.html",
     "ApiBase":"api",
-    "FileBase" : ""
+    "FileBase" : "/"
 }

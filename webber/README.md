@@ -3,7 +3,7 @@ webber
 
 ``webber``` is a Golang library that implements several common webserver variations.
 
-It provides a simple file server (filesvr), and easily extensible rest server (restsvr) and app server (appsvr) implementations.  All of these are based on the Golang net/http library, but provide simple integration points to create a scalable web server with appropriate logging functionality.
+It provides a simple file server (filesvr), and easily extensible app server (appsvr) implementations.  Both are based on the Golang net/http library, but provide simple integration points to create a scalable web server with appropriate logging functionality.
 
 ## Design Notes
 
