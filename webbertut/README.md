@@ -2,7 +2,6 @@ webbertut
 =========
 
 ``webbertut``` is a Golang example of how to use the webber library for creating webservers.
-tform.
 
 ## Usage
 

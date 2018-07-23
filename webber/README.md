@@ -24,6 +24,7 @@ See jmh/goweb/webbertut for an example app server
 
 -Support parameterized paths (e.g. /foo/[bar])
 -Switch fmt.PrintLn to proper logging
+-create a proper session manager
 
 
 ## License

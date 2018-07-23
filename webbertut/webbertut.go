@@ -34,7 +34,7 @@ import (
 	"jmh/goweb/webber"
 	"io/ioutil"
 	"encoding/json"
-	"math/rand"
+//	"math/rand"
 	"fmt"
 )
 
@@ -47,55 +47,57 @@ func loadConfigFile(configFileName string) webber.ServerConfig {
 }
 
 
-
+/*
 func MakeSessionKey () string {
 	return fmt.Sprintf("%d", rand.Uint64())
 }
-
+*/
 
 // This is our api handler, which will do a simple login and save session auth info
 //
 
 type AuthServer struct {
-	BasePath string
+	basePath string
 }
 
 func NewAuthServer(basePath string) *AuthServer {
 	f := new(AuthServer)
-	f.BasePath = "/" + basePath + "/"
+	f.basePath = "/" + basePath + "/"
 	return f 
 }
 
-func (h AuthServer) GetName() string {
+func (h AuthServer) Name() string {
 	return "AuthServer"
 }
 
-func (h AuthServer) GetBasePath() string {
-	return h.BasePath
+func (h AuthServer) BasePath() string {
+	return h.basePath
 }
 
 func (h AuthServer) Handler ( w http.ResponseWriter, r *http.Request) { 
-	fmt.Println("Auth server has base path of ", h.BasePath)
-	apiPath := r.URL.Path[len(h.BasePath):]
+	fmt.Println("Auth server has base path of ", h.basePath)
+	apiPath := r.URL.Path[len(h.basePath):]
 	fmt.Println("AuthServer Handler  called for ", apiPath)
 	webber.DispatchMethod(h, w, r);
 }
 
 func (h AuthServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Get called", r.URL.Path)
-	apiPath := r.URL.Path[len(h.BasePath):]
+	apiPath := r.URL.Path[len(h.basePath):]
 	fmt.Println("AuthServer handling ", apiPath)
 
 	switch apiPath {
 	case "check":
-		// get the session from the header
-		sessionKey := r.Header.Get("Session")
+		// get the session if one exists
+		bHasSession, sessionKey := webber.GetSession(r)
 		// ordinarily we would use this to look up the session in a db or memcache to 
 		// get session information, instead we'll just write the session key back to the caller
 		// as our example
+		fmt.Println(bHasSession, sessionKey)
 		fmt.Fprintf(w, "<html><body>The session key is %s</body></html>", sessionKey)
 	case "logout":
 		// in this case, we would clear the session entry in the db and the header itself
+		webber.ClearSession(w)
 		fmt.Fprintf(w, "ok")
 	}
 	
@@ -116,9 +118,9 @@ func (h AuthServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 		// ordinarily, we'd create info about the login and store
 		// it in a db or memcache under a key, but for this example,
 		// we'll just create the key and set the header
-		sk := MakeSessionKey();
+		sk := webber.MakeSessionKey(w);
 		fmt.Println("session key is ", sk)
-		w.Header().Add("Session", sk)
+		//w.Header().Add("Session", sk)
 		fmt.Fprintf(w, "Success")
 		return		
 	} else {
@@ -134,16 +136,18 @@ func (h AuthServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 //
 func main() {
 
-	// load our config file so we know what port to use
-	config := loadConfigFile("config.json")
+	config := webber.LoadConfig("config.json")
 
 	// create an App Server
-	as := webber.NewAppServer("as_config.json")
+	//as := webber.NewAppServer(config)
 
-	// create our auth handler and assign it to api/auth
-	auths := NewAuthServer("api/auth")
+	// or
+	defaultConfig := webber.DefaultConfig()
+	as := webber.NewAppServer(defaultConfig)
+
+	// create our auth handler and assign it to <apibase>/auth
+	auths := NewAuthServer(config.ApiBase + "/auth")
 	as.RegisterHandler(auths)
-
 
 	// now start the server
 	http.HandleFunc("/", as.Handler)

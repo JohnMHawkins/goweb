@@ -25,20 +25,17 @@ package webber
 import (
 	"fmt"
 	"net/http"
-	"io/ioutil"
-	"encoding/json"
+//	"io/ioutil"
+//	"encoding/json"
 )
 
 type MethodHandler map[string]WebHandler
 
 // AppServer is a webserver intended to support web applications
 type AppServer struct {
-	configFileName string
-	Config ServerConfig
-	BasePath string
+	Config *ServerConfig
 	FileServerInst* FileServer
 	Handlers map[string]WebHandler
-	MethodHandlers map[string]map[string]WebHandler
 }
 
 // NewAppServer creates a new appserver with configuration information supplied by a file.  Will
@@ -56,31 +53,11 @@ type AppServer struct {
 // Returns:
 //	*AppServer : the app server created
 //
-func NewAppServer(configFileName string) *AppServer {
+func NewAppServer(config *ServerConfig) *AppServer {
 	f := new(AppServer)
-	f.MethodHandlers = make(map[string]map[string]WebHandler)
 
-	// load configuration from file
-	if (len(configFileName) == 0) {
-		configFileName = "file_server_config.json"
-	}
-
-	f.configFileName = configFileName
-
-	config, err := ioutil.ReadFile(configFileName)
-	if err != nil {
-		fmt.Println("Failed to load app server config file " + configFileName + ":", err)
-	}
-
-	jsonerr := json.Unmarshal(config, &f.Config )
-	if jsonerr != nil {
-		fmt.Println("Failed to parse file server config file : ", jsonerr)
-	} else {
-		fmt.Println("root = " + f.Config.Root)
-		fmt.Println("apibase = " + f.Config.ApiBase)
-	}
-
-	f.FileServerInst = NewFileServerWithConfig("/", f.Config)
+	f.Config = config
+	f.FileServerInst = NewFileServer("/", f.Config.WWWRoot, f.Config.DefaultFile)
 
 	f.Handlers = make(map[string]WebHandler)
 	return f
@@ -95,7 +72,7 @@ func NewAppServer(configFileName string) *AppServer {
 // Returns:
 //	string : Always just returns "AppServer"
 //
-func (h AppServer) GetName() string {
+func (h AppServer) Name() string {
 	// AppServers don't have a unique name
 	return "AppServer"
 }
@@ -107,11 +84,10 @@ func (h AppServer) GetName() string {
 //	none
 //
 // Returns:
-//	string : Always just returns "/"
+//	string : the api base
 //
-func (h AppServer) GetBasePath() string {
-	// AppServers don't have a base path othert than "/""
-	return "/"
+func (h AppServer) BasePath() string {
+	return h.Config.ApiBase
 }
 
 // Handler - the base handler for the AppServer.
@@ -133,9 +109,8 @@ func (h AppServer) Handler (w http.ResponseWriter, r *http.Request) {
 				fmt.Println("...found it")
 				wasHandled = true
 				phf := h.Handlers[p]
-				fmt.Println("...is type ",phf.GetName())
+				fmt.Println("...is type ",phf.Name())
 				DispatchMethod(phf, w, r)
-				//phf.Handler(w, r)
 			} 
 		}
 	}
@@ -156,7 +131,7 @@ func (h AppServer) Handler (w http.ResponseWriter, r *http.Request) {
 //	none
 //
 func (h AppServer) RegisterHandler(handler WebHandler) {
-	basePath := handler.GetBasePath()
+	basePath := handler.BasePath()
 	h.Handlers[basePath] = handler
 }
 

@@ -4,71 +4,59 @@ import (
 	"fmt"
 	"net/http"
 	"io/ioutil"	
-	"encoding/json"
+	//"encoding/json"
 	"path"
 )
 
 type FileServer struct {
-	ConfigFileName string
 	Config ServerConfig
-	BasePath string
+	WWWRootPath string 	// file path to where the www root directory is on the server.  Files served from here 
+	basePath string     // url path to where we start serving files from.  e.g. "/files", but usually "/"
+	DefaultFile string	// name of the default file served up for the root.  Usually Index.html
 }
 
 func NewFileServerWithConfig(basePathToHere string, config ServerConfig) *FileServer {
 	f := new(FileServer)
 
-	f.BasePath = basePathToHere
+	f.basePath = basePathToHere
 	f.Config = config
 
 	return f
 }
 
-func NewFileServer(basePathToHere string, configFileName string) *FileServer {
+func NewFileServer(basePathToHere string, wwwRoot string, defaultFile string) *FileServer {
 	f := new(FileServer)
 
-	f.BasePath = basePathToHere 
+	f.basePath = basePathToHere 
+	f.WWWRootPath = wwwRoot
 
-	// load configuration from file
-	if (len(configFileName) == 0) {
-		configFileName = "file_server_config.json"
-	}
-
-	f.ConfigFileName = configFileName
-
-	config, err := ioutil.ReadFile(configFileName)
-	if err != nil {
-		fmt.Println("Failed to load file server config file " + configFileName + ":", err)
-	}
-	
-	jsonerr := json.Unmarshal(config, &f.Config )
-	if jsonerr != nil {
-		fmt.Println("Failed to parse file server config file : ", jsonerr)
+	// if they specified a default file, use it, otherwise use index.html as the default
+	if len(defaultFile) > 0 {
+		f.DefaultFile = defaultFile
 	} else {
-		fmt.Println("root = " + f.Config.Root)
+		f.DefaultFile = "index.html"
 	}
 	
-
 	return f
 }
 
 
-func (h FileServer) GetName() string {
+func (h FileServer) Name() string {
 	return "FileServer"
 }
 
-func (h FileServer) GetBasePath() string {
-	return h.BasePath;
+func (h FileServer) BasePath() string {
+	return h.basePath;
 }
 
 
 func (h FileServer) HandleGet (w http.ResponseWriter, r *http.Request) {
-	ourPath := r.URL.Path[len(h.BasePath):]
+	ourPath := r.URL.Path[len(h.basePath):]
 	fmt.Println("fileserver handleGet of ", ourPath)
-	SetSession(w, "", "hello")
 	if len(ourPath) == 0 {
-		ourPath = h.Config.DefaultFile
+		ourPath = h.DefaultFile
 	}
-	filename := path.Join(h.Config.Root,  ourPath)
+	filename := path.Join(h.WWWRootPath,  ourPath)
 	fmt.Println("...fileserver handleGet looking for ", filename)
 	body, err := ioutil.ReadFile(filename)
 	if err == nil {
@@ -80,8 +68,7 @@ func (h FileServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			w.Write(body)
 		} else {
-			fmt.Println("Error: ", err)
-			w.WriteHeader(404)
+			http.Error(w, "File not Fount", http.StatusNotFound)
 		}
 
 	}

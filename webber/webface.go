@@ -25,39 +25,18 @@ package webber
 import (
 	"fmt"
 	"net/http"
-	"crypto/rand"
 )
  
 // WebHandler is the base interface for all web server types.
-// It only supports the common methods GET and POST.  If you 
-// need to support other methods, use WebFullHandler instead
+// It only supports the common methods GET and POST.  
 //
 type WebHandler interface {
-	//Handler(w http.ResponseWriter, r *http.Request)
 	HandleGet(w http.ResponseWriter, r *http.Request)
 	HandlePost(w http.ResponseWriter, r *http.Request)
-	GetBasePath() string
-	GetName() string
+	BasePath() string
+	Name() string
 }
 
-// WebFullHanlder is the same as WebHandler, but implements all
-// http methods.  Use this handler if you need to support PUT, PATCH,
-// TRACE, etc.  
-//
-type WebFullHandler interface {
-	//Handler(w http.ResponseWriter, r *http.Request)
-	HandleGet(w http.ResponseWriter, r *http.Request)
-	HandlePost(w http.ResponseWriter, r *http.Request)
-	HandlePut(w http.ResponseWriter, r *http.Request)
-	HandlePatch(w http.ResponseWriter, r *http.Request)
-	HandleHead(w http.ResponseWriter, r *http.Request)
-	HandleOptions(w http.ResponseWriter, r *http.Request)
-	HandleDelete(w http.ResponseWriter, r *http.Request)
-	HandleTrace(w http.ResponseWriter, r *http.Request)
-	HandleConnect(w http.ResponseWriter, r *http.Request)
-	GetBasePath() string
-	GetName() string
-}
 
 
 // root dispatcher called by all WebHandlers to determine Method and dispatch to appropriate case handler
@@ -96,65 +75,4 @@ func DispatchMethod(h WebHandler, w http.ResponseWriter, r *http.Request) {
 
 }
 
-// root dispatcher called by all WebHandlers to determine Method and dispatch to appropriate case handler
-func DispatchFullMethod(h WebFullHandler, w http.ResponseWriter, r *http.Request) {
-	
-	switch {
-		case r.Method == "GET":
-			fmt.Println("Get called")
-			h.HandleGet(w, r)
-		case r.Method == "HEAD":
-			fmt.Println("Head called")
-			h.HandleHead(w, r)
-		case r.Method == "TRACE":
-			fmt.Println("Trace called")
-			h.HandleTrace(w, r)
-		case r.Method == "OPTIONS":
-			fmt.Println("Options called")
-			h.HandleOptions(w, r)
-		case r.Method == "POST":
-			fmt.Println("Post called")
-			h.HandlePost(w, r)
-		case r.Method == "PUT":
-			fmt.Println("Put called")
-			h.HandlePut(w, r)
-		case r.Method == "PATCH":
-			fmt.Println("Patch called")
-			h.HandlePatch(w, r)
-		case r.Method == "DELETE":
-			fmt.Println("Delete called")
-			h.HandleDelete(w, r)
-		case r.Method == "CONNECT":
-			fmt.Println("Connect called")
-			h.HandleConnect(w, r)
-	}
 
-}
-
-// SetSession adds a session header, generating a random key if needed.
-//
-// Parameters:
-//	w http.ResponseWriter :	the response to add the session header to
-//	sessionKey string : the session key, if one already exists, or an empty string to generate a new one
-//	sessionValue string : the value written to the header
-//
-// Returns:
-//	nothing
-//
-func SetSession (w http.ResponseWriter, sessionKey string, sessionValue string) {
-	if len(sessionKey) == 0 {
-		// generate a random session sessionKey
-		var keyBuffer [16]byte
-
-		_, err := rand.Read(keyBuffer[:])
-		if err != nil {
-			// huh?  
-			// TODO : what is our recovery strategy here if we couldn't generate a session key?
-			return
-		}
-		sessionKey = fmt.Sprintf("%x", keyBuffer)
-	}
-
-	w.Header().Add(sessionKey, sessionValue)
-
-}
