@@ -25,6 +25,8 @@ package webber
 import (
 	"fmt"
 	"net/http"
+	"strings"
+	"encoding/json"
 )
  
 // WebHandler is the base interface for all web server types.
@@ -75,4 +77,122 @@ func DispatchMethod(h WebHandler, w http.ResponseWriter, r *http.Request) {
 
 }
 
+// ParsePathAndQueryFlat parses the path into an array of path elements (delimited by /) and 
+// a map[string][]string of query string parameters.
+//
+// Parameters:
+//	r		: http.request, used to fetch query and post params
+//	path 	: string that is the path as modified by the caller
+//	pathVars: optional, map of indicies into the path that should be extracted
+//			  from the pathParts and puts it into the query params
+//
+// Returns:
+//	two values, a []string of path parts and a map[string][]string of query/post
+//		params.  
+//
+// Example:
+//	if the path is "foo/bar?x=1&y=2" then this will return
+//	["foo","bar"] , ["x" = ["1"], "y" = ["2"]}
+//
+//
+func ParsePathAndQueryFlat (r *http.Request, path string, pathVars map[int]string) ([]string, map[string]string) {
+
+	fmt.Println("Parsing PathAndQuery ", path)
+	var pathParts []string
+	qParams := r.URL.Query()
+	queryParams := make(map[string]string)
+	for k, v := range qParams {
+		queryParams[k] = v[0]
+	}
+
+	if len(path) > 0 {
+		pathParts = strings.Split(path, "/")
+	}
+
+	fmt.Println("... starting pathParts ", pathParts)
+	// pull out any vars
+	i := 0
+	for k, v := range pathVars {
+		if len(pathParts) > (k-i) {
+			queryParams[v] = pathParts[k-i]
+			pathParts = append(pathParts[:k-i], pathParts[k-i+1:]...)
+			i++
+			fmt.Println("... changed pathParts to ", pathParts)
+		}
+	}
+
+
+	fmt.Println("... returning ", pathParts, queryParams)
+	return pathParts, queryParams
+
+}
+
+
+// ParsePathAndQuery parses the path into an array of path elements (delimited by /) and 
+// a map[string][]string of query string parameters.
+//
+// Parameters:
+//	r		: http.request, used to fetch query and post params
+//	path 	: string that is the path as modified by the caller
+//	pathVars: optional, map of indicies into the path that should be extracted
+//			  from the pathParts and puts it into the query params
+//
+// Returns:
+//	two values, a []string of path parts and a map[string][]string of query/post
+//		params.  
+//
+// Example:
+//	if the path is "foo/bar?x=1&y=2" then this will return
+//	["foo","bar"] , ["x" = ["1"], "y" = ["2"]}
+//
+//
+func ParsePathAndQuery (r *http.Request, path string, pathVars map[int]string) ([]string, map[string][]string) {
+
+	fmt.Println("Parsing PathAndQuery ", path)
+	var pathParts []string
+	queryParams := r.URL.Query()
+
+	if len(path) > 0 {
+		pathParts = strings.Split(path, "/")
+	}
+
+	fmt.Println("... starting pathParts ", pathParts)
+	// pull out any vars
+	i := 0
+	for k, v := range pathVars {
+		if len(pathParts) > (k-i) {
+			queryParams.Add(v, pathParts[k-i])
+			pathParts = append(pathParts[:k-i], pathParts[k-i+1:]...)
+			i++
+			fmt.Println("... changed pathParts to ", pathParts)
+		}
+	}
+
+
+	fmt.Println("... returning ", pathParts, queryParams)
+	return pathParts, queryParams
+
+}
+
+// ReturnJson returns the supplied struct marshalled to json, setting the 
+// appropriate http headers.
+//
+// Parameters:
+//	w :	the responseWriter to use
+//	jsonDoc : a structure that can be marshalled as json
+//
+// Returns:
+//	an error if the struct could not be marshalled
+//
+func ReturnJson ( w http.ResponseWriter, jsonDoc interface{} ) error  {
+	jsonStr, jsonerr := json.Marshal(jsonDoc)
+	if jsonerr == nil {
+		w.Header().Set("Content-type", "application/json")
+		w.Write(jsonStr)
+	} else {
+		http.Error(w, jsonerr.Error(), http.StatusInternalServerError)
+	}
+	return jsonerr
+
+}
 

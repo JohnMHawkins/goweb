@@ -32,28 +32,13 @@ package main
 import (
 	"net/http"
 	"jmh/goweb/webber"
-	"io/ioutil"
-	"encoding/json"
+//	"encoding/json"
 //	"math/rand"
 	"fmt"
 )
 
-// this lets us load configuration info from a file, potentially making deployments easier
-func loadConfigFile(configFileName string) webber.ServerConfig {
-	configFile, _ := ioutil.ReadFile(configFileName)
-	var config webber.ServerConfig
-	_ = json.Unmarshal(configFile, &config )
-	return config	
-}
 
-
-/*
-func MakeSessionKey () string {
-	return fmt.Sprintf("%d", rand.Uint64())
-}
-*/
-
-// This is our api handler, which will do a simple login and save session auth info
+// This is our api/auth handler, which will do a simple login and save session auth info
 //
 
 type AuthServer struct {
@@ -82,9 +67,11 @@ func (h AuthServer) Handler ( w http.ResponseWriter, r *http.Request) {
 
 func (h AuthServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 	apiPath := r.URL.Path[len(h.basePath):]
+	pathVars := map[int]string{1:"a"}
 	fmt.Println("AuthServer handling ", apiPath)
+	pathParts, _ := webber.ParsePathAndQueryFlat(r, apiPath, pathVars )
 
-	switch apiPath {
+	switch pathParts[0] {
 	case "check":
 		// get the session if one exists
 		bHasSession, sessionKey := webber.GetSession(r)
@@ -97,10 +84,10 @@ func (h AuthServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 		// in this case, we would clear the session entry in the db and the header itself
 		webber.ClearSession(w)
 		fmt.Fprintf(w, "ok")
+	
 	}
 	
 }
-
 
 func (h AuthServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 	parseErr := r.ParseForm()
@@ -128,6 +115,85 @@ func (h AuthServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 }
 
 
+
+type HikeInfo struct {
+	Name string
+	Length int
+	Description string
+}
+
+
+// This is our api/hike handler, which will tell us simple things about hikes
+//
+
+type HikeServer struct {
+	basePath string
+}
+
+func NewHikeServer(basePath string) *HikeServer {
+	f := new(HikeServer)
+	f.basePath = "/" + basePath + "/"
+	return f 
+}
+
+func (h HikeServer) Name() string {
+	return "HikeServer"
+}
+
+func (h HikeServer) BasePath() string {
+	return h.basePath
+}
+
+func (h HikeServer) Handler ( w http.ResponseWriter, r *http.Request) { 
+	apiPath := r.URL.Path[len(h.basePath):]
+	fmt.Println("HikeServer Handler  called for ", apiPath)
+	webber.DispatchMethod(h, w, r);
+}
+
+func (h HikeServer) HandleGet (w http.ResponseWriter, r *http.Request) {
+	apiPath := r.URL.Path[len(h.basePath):]
+	// api is in the form /api/hike/<hikename>/describe
+	//                    /api/hike/<hikename>/length
+	pathVars := map[int]string{0:"hike_name"}
+	fmt.Println("HikeServer handling ", apiPath)
+	pathParts, vars := webber.ParsePathAndQueryFlat(r, apiPath, pathVars )
+	fmt.Println("pathparts = ", pathParts )
+
+	hikeInfo := new(HikeInfo)
+	hikeInfo.Name = vars["hike_name"]
+	hikeInfo.Length = len(hikeInfo.Name)  // convenient, the hike is one mile per letter!
+	hikeInfo.Description = "It's a nice hike.  Isn't every hike a nice hike?"
+
+	if ( len(pathParts) == 0) {
+		// just return the hike info
+		webber.ReturnJson(w, hikeInfo)
+	} else {
+		switch pathParts[0] {
+		case "describe":
+			webber.ReturnJson(w, hikeInfo.Description)
+		case "length":
+			webber.ReturnJson(w, hikeInfo.Length)
+		default:
+			http.Error(w, "NYI", http.StatusNotImplemented)
+		}
+	
+	}
+	
+}
+
+func (h HikeServer) HandlePost (w http.ResponseWriter, r *http.Request) {
+	parseErr := r.ParseForm()
+	if parseErr != nil {
+		fmt.Println("error parsing login form: %s", parseErr)
+	}
+	//username := r.FormValue("username")
+	//password := r.FormValue("password")
+	http.Error(w, "NYI", http.StatusNotImplemented)
+
+}
+
+
+
 // main func - we'll load our config, create an AppServer, and add a handler (for auth) to it,
 // then start serving.
 //
@@ -145,6 +211,8 @@ func main() {
 	// create our auth handler and assign it to <apibase>/auth
 	auths := NewAuthServer(config.ApiBase + "/auth")
 	as.RegisterHandler(auths)
+	hikes := NewHikeServer(config.ApiBase + "/hike")
+	as.RegisterHandler(hikes)
 
 	// now start the server
 	http.HandleFunc("/", as.Handler)
