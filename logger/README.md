@@ -28,6 +28,11 @@ Step 1) create a logger upon initialization of your service:
     // connect the logger to the firehose delivery stream named "test-firehose1-useast-1"
 	fhLogger := logger.NewFirehoseLogger(app, "us-east-1", "default", "test-firehose1-useast-1")
 
+    // alternately, if you already have an AWS Session in the correct region from another operation,
+    // you can use it to create the logger
+	fhLogger := logger.NewFirehoseLoggerFromSession(app, existingSession, "test-firehose1-useast-1")
+
+
     // if you want all your log output to ALSO go to the stdout on the machine, call this:
     fhLogger.StdOutOn(true)
 
@@ -61,6 +66,7 @@ Step 2) whenever there is a message to log, call the LOG function on the logger:
 
 ## ToDo
 
+-Fix comments to be more gopherish
 
 ## License
 

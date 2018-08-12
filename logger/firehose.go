@@ -41,6 +41,7 @@ type FirehoseLogger struct {
 }
 
 
+
 // NewFirehoseLogger creates an AWSSession and then a Kinesis Firehose Client.
 //
 // It requires that a Deliverystream has already been created, and does not create one itself.  The
@@ -57,12 +58,33 @@ type FirehoseLogger struct {
 //	a pointer to an FirehoseLogger struct
 //
 func NewFirehoseLogger(app AppInfo, region string, profileName string, deliveryStreamName string) *FirehoseLogger {
-	fmt.Println("NewAWSLogger being created for region ", region, " and profile ", profileName, " on deliverystream ", deliveryStreamName)
-	f := new(FirehoseLogger)
-	f.AWSSession = session.Must(session.NewSessionWithOptions(session.Options{
+	fmt.Println("NewAWSLogger being created for region ", region, " and profile ", profileName)
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Profile: profileName, 
 		Config: aws.Config{Region: aws.String(region)},
 	}))
+	return NewFirehoseLoggerFromSession(app, sess, deliveryStreamName)
+
+}
+
+// NewFirehoseLoggerFromSession uses an existing AWSSession and creates a Kinesis Firehose Client.
+//
+// It requires that a Deliverystream has already been created, and does not create one itself.  The
+// reason for this is that AWS allows a limited number of deliverystreams by default, so it is potentially
+// dangerous to allow programatic creation - you could accidentally DDOS yourself.  
+//
+// parameters:
+//	app : the AppInfo structure describing the service
+//	session : the AWS.Session object already created.  
+//	deliveryStream : The name of the firehose delivery stream to use for the log
+//
+// Returns:
+//	a pointer to an FirehoseLogger struct
+//
+func NewFirehoseLoggerFromSession(app AppInfo, sess *session.Session, deliveryStreamName string) *FirehoseLogger {
+	fmt.Println("NewAWSLogger being created for region ", sess.Config.Region, " on deliverystream ", deliveryStreamName)
+	f := new(FirehoseLogger)
+	f.AWSSession = sess
 	f.FirehoseClient = firehose.New(f.AWSSession)
 	f.DeliveryStreamName = deliveryStreamName
 	f.AlsoToStdout = false

@@ -55,6 +55,8 @@ type AppInfo struct {
 //			msg is the message to be logged
 //			keys is an optional map of additional variables that can be used for searching
 //
+//	StdOutOne : controls whether the logger will echo the log data to stdout on the machine (default is Off)
+//		alsoToStdOut :  if true, will echo to stdout.  if false, will not echo to stdout
 type Logger interface {
 	LOG(level LogLevel, correlationid string, msg string, keys map[string]string)
 	StdOutOn(alsoToStdOut bool)
