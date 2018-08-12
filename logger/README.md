@@ -28,6 +28,12 @@ Step 1) create a logger upon initialization of your service:
     // connect the logger to the firehose delivery stream named "test-firehose1-useast-1"
 	fhLogger := logger.NewFirehoseLogger(app, "us-east-1", "default", "test-firehose1-useast-1")
 
+    // if you want all your log output to ALSO go to the stdout on the machine, call this:
+    fhLogger.StdOutOn(true)
+
+    // and of course to stop output from also going to stdout, call the same function with false
+    fhLogger.StdOutOn(false)
+
 
 Step 2) whenever there is a message to log, call the LOG function on the logger:
 
@@ -55,7 +61,7 @@ Step 2) whenever there is a message to log, call the LOG function on the logger:
 
 ## License
 
-awslogger is covered by the MIT Licesne.  
+logger is covered by the MIT Licesne.  
 
 Copyright (c) 2018 - John M. Hawkins <jmhawkins@msn.com>
 
