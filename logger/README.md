@@ -37,7 +37,10 @@ Step 1) create a logger upon initialization of your service:
 
 Step 2) whenever there is a message to log, call the LOG function on the logger:
 
-    // generate a correlation id to let you find related entries in the logs.  
+    // generate a correlation id to let you find related entries in the logs.  For example, you might do this
+    // on first receiving a call at your outer API and make sure every function and service involved in handling 
+    // the call has the correlationId available to include with any logs.  Then you will easily be able to 
+    // local all log entries related to handling that call
    	correlationId := logger.GenerateCorrelationId()
 
     // if you have additional fields you want to have available, put them in a keys map[string]string

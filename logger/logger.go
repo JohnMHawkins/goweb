@@ -29,8 +29,6 @@ import (
 
 // TODO
 // 
-//	-GetOrCreate for the firehose, with ability to specify the index and type
-//	-
 //
 
 
@@ -62,6 +60,7 @@ type Logger interface {
 	StdOutOn(alsoToStdOut bool)
 }
 
+// this is the data that will be sent to the remote log collector
 type LogEntry struct {
 	Level LogLevel  `json:"level"`
 	Timestamp int64 `json:"@timestamp"`
