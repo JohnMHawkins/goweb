@@ -16,6 +16,10 @@ WriteThroughMongoCache - library that implements a write-through cache to a mong
 A singleton Mongo db server fronted by the wtmcache library providing a cached db for any number of other server 
 instances to use a shared db with caching.
 
+## logger ##
+
+A logging library to help write off-box logs
+
 ## webbertut ##
 
 An example usage of webber (and eventually wtmcache and wtmcdb)

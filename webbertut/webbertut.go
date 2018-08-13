@@ -32,6 +32,7 @@ package main
 import (
 	"net/http"
 	"jmh/goweb/webber"
+	"jmh/goweb/logger"
 //	"encoding/json"
 //	"math/rand"
 	"fmt"
@@ -60,15 +61,13 @@ func (h AuthServer) BasePath() string {
 }
 
 func (h AuthServer) Handler ( w http.ResponseWriter, r *http.Request) { 
-	apiPath := r.URL.Path[len(h.basePath):]
-	fmt.Println("AuthServer Handler  called for ", apiPath)
 	webber.DispatchMethod(h, w, r);
 }
 
 func (h AuthServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 	apiPath := r.URL.Path[len(h.basePath):]
 	pathVars := map[int]string{1:"a"}
-	fmt.Println("AuthServer handling ", apiPath)
+	logger.StdLogger.LOG(logger.INFO, "", fmt.Sprintf("AuthServer GET handler called for %s", apiPath), nil)
 	pathParts, _ := webber.ParsePathAndQueryFlat(r, apiPath, pathVars )
 
 	switch pathParts[0] {
@@ -92,7 +91,7 @@ func (h AuthServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 func (h AuthServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 	parseErr := r.ParseForm()
 	if parseErr != nil {
-		fmt.Println("error parsing login form: %s", parseErr)
+		logger.StdLogger.LOG(logger.ERROR, "", fmt.Sprintf("error parsing login form: %s", parseErr), nil)
 	}
 	username := r.FormValue("username")
 	password := r.FormValue("password")
@@ -103,12 +102,11 @@ func (h AuthServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 		// it in a db or memcache under a key, but for this example,
 		// we'll just create the key and set the header
 		sk := webber.MakeSessionKey(w);
-		fmt.Println("session key is ", sk)
-		//w.Header().Add("Session", sk)
+		w.Header().Add("Session", sk)
 		fmt.Fprintf(w, "Success")
 		return		
 	} else {
-		fmt.Println("invalid credentials")
+		logger.StdLogger.LOG(logger.INFO, "", fmt.Sprintf("Invalid login for username: %s", username), nil)
 		http.Error(w, "Invalid Credentials", http.StatusUnauthorized)
 	}
 
@@ -146,7 +144,7 @@ func (h HikeServer) BasePath() string {
 
 func (h HikeServer) Handler ( w http.ResponseWriter, r *http.Request) { 
 	apiPath := r.URL.Path[len(h.basePath):]
-	fmt.Println("HikeServer Handler  called for ", apiPath)
+	logger.StdLogger.LOG(logger.INFO, "", fmt.Sprintf("HikeServer Handler  called for %s", apiPath), nil)
 	webber.DispatchMethod(h, w, r);
 }
 
@@ -155,9 +153,7 @@ func (h HikeServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 	// api is in the form /api/hike/<hikename>/describe
 	//                    /api/hike/<hikename>/length
 	pathVars := map[int]string{0:"hike_name"}
-	fmt.Println("HikeServer handling ", apiPath)
 	pathParts, vars := webber.ParsePathAndQueryFlat(r, apiPath, pathVars )
-	fmt.Println("pathparts = ", pathParts )
 
 	hikeInfo := new(HikeInfo)
 	hikeInfo.Name = vars["hike_name"]
@@ -184,7 +180,7 @@ func (h HikeServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 func (h HikeServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 	parseErr := r.ParseForm()
 	if parseErr != nil {
-		fmt.Println("error parsing login form: %s", parseErr)
+		logger.StdLogger.LOG(logger.ERROR, "", fmt.Sprintf("HikeServer error parsing POST: %s", parseErr), nil)
 	}
 	//username := r.FormValue("username")
 	//password := r.FormValue("password")
@@ -194,12 +190,23 @@ func (h HikeServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 
 
 
-// main func - we'll load our config, create an AppServer, and add a handler (for auth) to it,
-// then start serving.
+// main func - we'll load our config, set up a logger,create an AppServer, and add two handlers
+// one for auth, the other to return data about Hikes,  then start serving.
 //
 func main() {
 
+	// read our config
 	config := webber.LoadConfig("config.json")
+	
+	////////////////////////////
+	// set up our logger
+	// fill out the AppInfo struct so the logger knows who it is writting logs for:
+	app := logger.AppInfo{Name:"webbertut", Version:"0.1.1", Instance:"1",Cluster:"DEV-east"}
+	fhLogger := logger.NewFirehoseLogger(app, "us-east-1", "default", "hawk-test-firehose1-useast-1")
+	logger.StdLogger = *fhLogger
+	logger.StdLogger.StdOutOn(true)
+	logger.StdLogger.LOG(logger.INFO, "", "WebberTut starting up", nil)
+
 
 	// create an App Server
 	as := webber.NewAppServer(config)

@@ -112,11 +112,11 @@ func NewFirehoseLoggerFromSession(app AppInfo, sess *session.Session, deliverySt
 
 }
 
-func (l *FirehoseLogger) StdOutOn(alsoToStdOut bool) {
+func (l FirehoseLogger) StdOutOn(alsoToStdOut bool) {
 	l.AlsoToStdout = alsoToStdOut
 }
 
-func (l *FirehoseLogger) Log (level LogLevel, correlationid string, msg string, keys map[string]string ) {
+func (l FirehoseLogger) LOG (level LogLevel, correlationid string, msg string, keys map[string]string ) {
 
 	entry := LogEntry{Level: level, Timestamp:time.Now().UnixNano()/1000000, CorrelationId:correlationid, Message:msg, App:l.App, Keys:keys}
 	data, _ := json.Marshal(entry)

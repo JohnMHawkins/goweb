@@ -27,6 +27,8 @@ import (
 	"encoding/hex"
 )
 
+var StdLogger Logger
+
 // TODO
 // 
 //

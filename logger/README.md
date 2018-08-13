@@ -52,16 +52,16 @@ Step 2) whenever there is a message to log, call the LOG function on the logger:
     keys := map[string]string{"abc":"123","xyz":"kumquot"}
 
     // send a Loglevel CRITICAL log message
-    fhLogger.Log(logger.CRITICAL, correlationId, ""Your text log message goes here", keys)
+    fhLogger.Log(logger.CRITICAL, correlationId, "Your text log message goes here", keys)
 
     // send a Loglevel ERROR log message
-    fhLogger.Log(logger.ERROR, correlationId, ""Your text log message goes here", keys)
+    fhLogger.Log(logger.ERROR, correlationId, "Your text log message goes here", keys)
 
     // send a Loglevel WARN log message
-    fhLogger.Log(logger.WARN, correlationId, ""Your text log message goes here", keys)
+    fhLogger.Log(logger.WARN, correlationId, "Your text log message goes here", keys)
 
     // send a Loglevel INFO log message
-    fhLogger.Log(logger.INFO, correlationId, ""Your text log message goes here", keys)
+    fhLogger.Log(logger.INFO, correlationId, "Your text log message goes here", keys)
 
 
 ## ToDo
