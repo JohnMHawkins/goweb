@@ -58,7 +58,7 @@ type FirehoseLogger struct {
 //	a pointer to an FirehoseLogger struct
 //
 func NewFirehoseLogger(app AppInfo, region string, profileName string, deliveryStreamName string) *FirehoseLogger {
-	fmt.Println("NewAWSLogger being created for region ", region, " and profile ", profileName)
+	fmt.Println("FireHoseLogger creating new AWS Session for region ", region, " and profile ", profileName)
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Profile: profileName, 
 		Config: aws.Config{Region: aws.String(region)},
@@ -82,7 +82,7 @@ func NewFirehoseLogger(app AppInfo, region string, profileName string, deliveryS
 //	a pointer to an FirehoseLogger struct
 //
 func NewFirehoseLoggerFromSession(app AppInfo, sess *session.Session, deliveryStreamName string) *FirehoseLogger {
-	fmt.Println("NewAWSLogger being created for region ", sess.Config.Region, " on deliverystream ", deliveryStreamName)
+	fmt.Println("NewAWSLogger being created for region ", *(sess.Config.Region), " on deliverystream ", deliveryStreamName)
 	f := new(FirehoseLogger)
 	f.AWSSession = sess
 	f.FirehoseClient = firehose.New(f.AWSSession)

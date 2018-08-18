@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"strings"
 	"encoding/json"
+	"jmh/goweb/logger"
 )
  
 // WebHandler is the base interface for all web server types.
@@ -43,35 +44,38 @@ type WebHandler interface {
 
 // root dispatcher called by all WebHandlers to determine Method and dispatch to appropriate case handler
 func DispatchMethod(h WebHandler, w http.ResponseWriter, r *http.Request) {
+
+	// TODO 
+	//	- look for a correlation_id in the header, create one if not already there
+	//	- improve the formatting of the logged request
+	logger.StdLogger.LOG(logger.INFO, "", fmt.Sprintf("Inbound request %s", r), nil)
 	
 	switch {
 		case r.Method == "GET":
-			fmt.Println("Get called")
 			h.HandleGet(w, r)
 		case r.Method == "POST":
-			fmt.Println("Post called")
 			h.HandlePost(w, r)
 
 		case r.Method == "HEAD":
-			fmt.Println("Head called")
+			logger.StdLogger.LOG(logger.WARN, "", fmt.Sprintf("Unsupported method %s called", r.Method), nil)
 			http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
 		case r.Method == "TRACE":
-			fmt.Println("Trace called")
+			logger.StdLogger.LOG(logger.WARN, "", fmt.Sprintf("Unsupported method %s called", r.Method), nil)
 			http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
 		case r.Method == "OPTIONS":
-			fmt.Println("Options called")
+			logger.StdLogger.LOG(logger.WARN, "", fmt.Sprintf("Unsupported method %s called", r.Method), nil)
 			http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
 		case r.Method == "PUT":
-			fmt.Println("Put called")
+			logger.StdLogger.LOG(logger.WARN, "", fmt.Sprintf("Unsupported method %s called", r.Method), nil)
 			http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
 		case r.Method == "PATCH":
-			fmt.Println("Patch called")
+			logger.StdLogger.LOG(logger.WARN, "", fmt.Sprintf("Unsupported method %s called", r.Method), nil)
 			http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
 		case r.Method == "DELETE":
-			fmt.Println("Delete called")
+			logger.StdLogger.LOG(logger.WARN, "", fmt.Sprintf("Unsupported method %s called", r.Method), nil)
 			http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
 		case r.Method == "CONNECT":
-			fmt.Println("Connect called")
+			logger.StdLogger.LOG(logger.WARN, "", fmt.Sprintf("Unsupported method %s called", r.Method), nil)
 			http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
 	}
 
@@ -97,7 +101,6 @@ func DispatchMethod(h WebHandler, w http.ResponseWriter, r *http.Request) {
 //
 func ParsePathAndQueryFlat (r *http.Request, path string, pathVars map[int]string) ([]string, map[string]string) {
 
-	fmt.Println("Parsing PathAndQuery ", path)
 	var pathParts []string
 	qParams := r.URL.Query()
 	queryParams := make(map[string]string)
@@ -109,7 +112,6 @@ func ParsePathAndQueryFlat (r *http.Request, path string, pathVars map[int]strin
 		pathParts = strings.Split(path, "/")
 	}
 
-	fmt.Println("... starting pathParts ", pathParts)
 	// pull out any vars
 	i := 0
 	for k, v := range pathVars {
@@ -117,12 +119,10 @@ func ParsePathAndQueryFlat (r *http.Request, path string, pathVars map[int]strin
 			queryParams[v] = pathParts[k-i]
 			pathParts = append(pathParts[:k-i], pathParts[k-i+1:]...)
 			i++
-			fmt.Println("... changed pathParts to ", pathParts)
 		}
 	}
 
 
-	fmt.Println("... returning ", pathParts, queryParams)
 	return pathParts, queryParams
 
 }
@@ -148,7 +148,6 @@ func ParsePathAndQueryFlat (r *http.Request, path string, pathVars map[int]strin
 //
 func ParsePathAndQuery (r *http.Request, path string, pathVars map[int]string) ([]string, map[string][]string) {
 
-	fmt.Println("Parsing PathAndQuery ", path)
 	var pathParts []string
 	queryParams := r.URL.Query()
 
@@ -156,7 +155,6 @@ func ParsePathAndQuery (r *http.Request, path string, pathVars map[int]string) (
 		pathParts = strings.Split(path, "/")
 	}
 
-	fmt.Println("... starting pathParts ", pathParts)
 	// pull out any vars
 	i := 0
 	for k, v := range pathVars {
@@ -164,12 +162,9 @@ func ParsePathAndQuery (r *http.Request, path string, pathVars map[int]string) (
 			queryParams.Add(v, pathParts[k-i])
 			pathParts = append(pathParts[:k-i], pathParts[k-i+1:]...)
 			i++
-			fmt.Println("... changed pathParts to ", pathParts)
 		}
 	}
 
-
-	fmt.Println("... returning ", pathParts, queryParams)
 	return pathParts, queryParams
 
 }
@@ -190,6 +185,7 @@ func ReturnJson ( w http.ResponseWriter, jsonDoc interface{} ) error  {
 		w.Header().Set("Content-type", "application/json")
 		w.Write(jsonStr)
 	} else {
+		logger.StdLogger.LOG(logger.ERROR, "", fmt.Sprintf("Error %s returning json %s", jsonerr.Error(), jsonStr), nil)
 		http.Error(w, jsonerr.Error(), http.StatusInternalServerError)
 	}
 	return jsonerr

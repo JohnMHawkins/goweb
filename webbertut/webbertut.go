@@ -36,6 +36,7 @@ import (
 	"jmh/goweb/wtmcache"
 	"gopkg.in/mgo.v2"
 	"os"
+	"flag"
 //	"time"
 //	"encoding/json"
 //	"math/rand"
@@ -101,12 +102,8 @@ func (h AuthServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 		bHasSession, sessionKey := webber.GetSession(r, &session)
 
 		if ( bHasSession ) {
-			fmt.Println(">>> found session ", sessionKey, "  ", session)
 			//  log it and write back a page.  
-			// NOTE the cast of session to UserSessionData.  What we get back is an interface{},
-			// so we need to make this cast.
 			logger.StdLogger.LOG(logger.INFO, "", fmt.Sprintf("found sesssion %s", session), nil)
-//			logger.StdLogger.LOG(logger.INFO, "", fmt.Sprintf("found sesssion %s", session.(bson.M)), nil)
 			fmt.Fprintf(w, "<html><body>The session key is %s for username %s</body></html>", sessionKey, session.Username)
 		} else {
 			fmt.Fprintf(w, "<html><body>No active session found</body></html>")
@@ -230,17 +227,30 @@ func (h HikeServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 //
 func main() {
 
-	configFile := "config.json"
-	if ( len(os.Args) > 1) {
-		configFile = os.Args[1]
-	}
+	// get any cmd line flags
+	configFile := flag.String("config", "config.json", "path to the config file")
+	AppInstance := flag.String("instance", "", "instance name")
+	AppCluster := flag.String("cluster", "", "Name for the cluster")
+	AWSRegion := flag.String("awsregion", "", "What AWS region we should look for resources in")
+	DBPath := flag.String("dbpath", "", "Path to the db")
+	flag.Parse()
+
 	// read our config
-	config := webber.LoadConfig(configFile)
+	config := webber.LoadConfig(*configFile)
+
+	//set any cmd line overrides
+	if len(*AWSRegion) > 0 {
+		config.AWSRegion = *AWSRegion
+	}
+	if len(*DBPath) > 0 {
+		config.DBPath = *DBPath
+	}
+
 	
 	////////////////////////////
 	// set up our logger
 	// fill out the AppInfo struct so the logger knows who it is writting logs for:
-	app := logger.AppInfo{Name:config.AppName, Version:config.AppVersion, Instance:"1",Cluster:"DEV-east"}
+	app := logger.AppInfo{Name:config.AppName, Version:config.AppVersion, Instance:*AppInstance,Cluster:*AppCluster}
 	fhLogger := logger.NewFirehoseLogger(app, config.AWSRegion, config.AWSProfile, config.LoggerFirehoseDeliveryStream)
 	logger.StdLogger = *fhLogger
 	logger.StdLogger.StdOutOn(true)
@@ -259,13 +269,14 @@ func main() {
 	// create an App Server
 	as := webber.NewAppServer(config)
 
-	// or
-	//defaultConfig := webber.DefaultConfig()
-	//as := webber.NewAppServer(defaultConfig)
+	//////////////////////////////////
+	// create a couple of handlers
 
 	// create our auth handler and assign it to <apibase>/auth
 	auths := NewAuthServer(config.ApiBase + "/auth")
 	as.RegisterHandler(auths)
+
+	// add a hike handler and assing it <apibase>/hike
 	hikes := NewHikeServer(config.ApiBase + "/hike")
 	as.RegisterHandler(hikes)
 
