@@ -23,12 +23,14 @@
 package wtmcache
 
 import (
+	"fmt"
 	"time"
 	"reflect"
 	"errors"
 	"github.com/patrickmn/go-cache"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"jmh/goweb/logger"
 )
 
 
@@ -86,12 +88,14 @@ func newCollection ( db *Db, collectionName string, keyField string, cacheDur ti
 func (w *Collection) Read (key string, result interface{}) (interface{}, error) {
 	r, present := w.C.Get(key)
 	if present {
-		return r, nil
+		err := bson.Unmarshal(r.([]byte), result)
+		return result, err
 	} else {
 		// fetch from db
 		err := w.Dbc.Find(bson.M{w.KeyField: key}).One(result)
 		if err == nil {
-			w.C.Set(key, result, cache.DefaultExpiration)
+			// load it in the cache
+			w.WriteFast(key, result)
 		}
 		return result, err
 	}
@@ -148,7 +152,9 @@ func (w *Collection) WriteFast(key string, document interface{}) error {
 
 	_, err := w.Dbc.Upsert(bson.M{w.KeyField: key}, document)
 	if err == nil {
-		w.C.Set(key, document, cache.DefaultExpiration)
+		d, err2 := bson.Marshal(document)
+		w.C.Set(key, d, cache.DefaultExpiration)
+		err = err2
 	}
 	return err
 }
@@ -181,10 +187,10 @@ func (w *Collection) Write(document interface{}) error {
 	}
 
 	if key == "" {
+		logger.StdLogger.LOG(logger.ERROR, "", fmt.Sprintf("DB write called but keyfield %s not found in supplied document", w.KeyField), nil)
 		return errors.New("No key field " + w.KeyField + " found in document " )
 	}
 	return w.WriteFast(key, document)
-
 }
 
 // Deletes the entry identified by key from both the cache and the underlying collection

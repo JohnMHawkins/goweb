@@ -33,11 +33,32 @@ import (
 	"net/http"
 	"jmh/goweb/webber"
 	"jmh/goweb/logger"
+	"jmh/goweb/wtmcache"
+	"gopkg.in/mgo.v2"
+	"os"
+//	"time"
 //	"encoding/json"
 //	"math/rand"
+//	"gopkg.in/mgo.v2/bson"
 	"fmt"
 )
 
+// uncomment to enable profiling on the /debug/pprof/ endpoint
+import _ "net/http/pprof"
+
+
+// Global instantiations
+
+var cDb *wtmcache.Db					// the db we will use
+
+
+// this is the struct we use for keeping data about our logged in user
+// It's only a sample, so it doesn't store much, but you can add more information, such as
+// permissions or preferences.
+//
+type UserSessionData struct {
+	Username string		`json:"username"`
+}
 
 // This is our api/auth handler, which will do a simple login and save session auth info
 //
@@ -73,12 +94,23 @@ func (h AuthServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 	switch pathParts[0] {
 	case "check":
 		// get the session if one exists
-		bHasSession, sessionKey := webber.GetSession(r)
-		// ordinarily we would use this to look up the session in a db or memcache to 
-		// get session information, instead we'll just write the session key back to the caller
-		// as our example
-		fmt.Println(bHasSession, sessionKey)
-		fmt.Fprintf(w, "<html><body>The session key is %s</body></html>", sessionKey)
+		// NOTE: this only works if we're a single instance.  If we are multiple instances,
+		// we need to use the wtmdb (still TBD) to ensure we don't have divergent caches.
+		//var session UserSessionData
+		session := UserSessionData{}
+		bHasSession, sessionKey := webber.GetSession(r, &session)
+
+		if ( bHasSession ) {
+			fmt.Println(">>> found session ", sessionKey, "  ", session)
+			//  log it and write back a page.  
+			// NOTE the cast of session to UserSessionData.  What we get back is an interface{},
+			// so we need to make this cast.
+			logger.StdLogger.LOG(logger.INFO, "", fmt.Sprintf("found sesssion %s", session), nil)
+//			logger.StdLogger.LOG(logger.INFO, "", fmt.Sprintf("found sesssion %s", session.(bson.M)), nil)
+			fmt.Fprintf(w, "<html><body>The session key is %s for username %s</body></html>", sessionKey, session.Username)
+		} else {
+			fmt.Fprintf(w, "<html><body>No active session found</body></html>")
+		}
 	case "logout":
 		// in this case, we would clear the session entry in the db and the header itself
 		webber.ClearSession(w)
@@ -98,11 +130,14 @@ func (h AuthServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 
 	if username == "dog" && password == "bark" {
 		// that's our login!  Go ahead and make a session
-		// ordinarily, we'd create info about the login and store
-		// it in a db or memcache under a key, but for this example,
-		// we'll just create the key and set the header
-		sk := webber.MakeSessionKey(w);
-		w.Header().Add("Session", sk)
+		// store it in the db and set the header.
+		
+		// this is the session data we want to store.  For this example, it's just the username, but
+		// it could be anything we need to keep track of or check for each call, such as permissions,
+		// preferences, etc.
+		sessionData := UserSessionData{Username:username}
+		sk, err := webber.MakeSession(w, sessionData);
+		fmt.Println("Created a session with the key ", sk, " err = ", err)
 		fmt.Fprintf(w, "Success")
 		return		
 	} else {
@@ -195,18 +230,31 @@ func (h HikeServer) HandlePost (w http.ResponseWriter, r *http.Request) {
 //
 func main() {
 
+	configFile := "config.json"
+	if ( len(os.Args) > 1) {
+		configFile = os.Args[1]
+	}
 	// read our config
-	config := webber.LoadConfig("config.json")
+	config := webber.LoadConfig(configFile)
 	
 	////////////////////////////
 	// set up our logger
 	// fill out the AppInfo struct so the logger knows who it is writting logs for:
-	app := logger.AppInfo{Name:"webbertut", Version:"0.1.1", Instance:"1",Cluster:"DEV-east"}
-	fhLogger := logger.NewFirehoseLogger(app, "us-east-1", "default", "hawk-test-firehose1-useast-1")
+	app := logger.AppInfo{Name:config.AppName, Version:config.AppVersion, Instance:"1",Cluster:"DEV-east"}
+	fhLogger := logger.NewFirehoseLogger(app, config.AWSRegion, config.AWSProfile, config.LoggerFirehoseDeliveryStream)
 	logger.StdLogger = *fhLogger
 	logger.StdLogger.StdOutOn(true)
 	logger.StdLogger.LOG(logger.INFO, "", "WebberTut starting up", nil)
 
+	// connect to our db
+	dbSession, dbErr := mgo.Dial(config.DBPath)
+	if ( dbErr != nil ) {
+		// can't connect to our db
+		logger.StdLogger.LOG(logger.CRITICAL, "", fmt.Sprintf("Can't connect to db: %s", dbErr), nil)
+		os.Exit(1)
+	}
+	cDb = wtmcache.NewDb(dbSession, "tutorial")
+	webber.CreateSessionDbCollection(cDb, config.SessionCollName)
 
 	// create an App Server
 	as := webber.NewAppServer(config)

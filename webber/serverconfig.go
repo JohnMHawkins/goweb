@@ -33,6 +33,19 @@ type ServerConfig struct {
 	DefaultFile string		// default html file, e.g. index.html
 	ApiBase string			// base url path to start of api, e.g. /api
 	FileBase string			// base url path to files, e.g. /files
+
+	DBPath string			// path to the db we should use
+
+	SessionCollName string	// name of the collection used for session info in the DB
+
+	// optional, used for app ID
+	AppName string			// the name of the server app, for logging and id purposes
+	AppVersion string		// the version of the server app
+	
+	// optional, used for AWS id
+    AWSRegion string		// AWS region it is launched in
+    AWSProfile string		// profile in  ~/.aws/credentials to use for auth to aWS
+    LoggerFirehoseDeliveryStream string 	// name of the firehose delivery stream to use
 }
 
 
