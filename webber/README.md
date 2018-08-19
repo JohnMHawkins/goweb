@@ -22,8 +22,6 @@ See jmh/goweb/webbertut for an example app server
 
 ## ToDo
 
--Switch fmt.PrintLn to proper logging
--create a proper session manager
 
 
 ## License

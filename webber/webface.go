@@ -82,7 +82,9 @@ func DispatchMethod(h WebHandler, w http.ResponseWriter, r *http.Request) {
 }
 
 // ParsePathAndQueryFlat parses the path into an array of path elements (delimited by /) and 
-// a map[string][]string of query string parameters.
+// a map[string]string of query string parameters.  The difference between ParsePathAndQuery and 
+// ParsePathAndQueryFlat is the flat version only returns a single value for each query param, while
+// the non-flat returns a list for each (even if there is only one item in the list)
 //
 // Parameters:
 //	r		: http.request, used to fetch query and post params
@@ -91,7 +93,7 @@ func DispatchMethod(h WebHandler, w http.ResponseWriter, r *http.Request) {
 //			  from the pathParts and puts it into the query params
 //
 // Returns:
-//	two values, a []string of path parts and a map[string][]string of query/post
+//	two values, a []string of path parts and a map[string]string of query/post
 //		params.  
 //
 // Example:
@@ -113,7 +115,8 @@ func ParsePathAndQueryFlat (r *http.Request, path string, pathVars map[int]strin
 	}
 
 	// pull out any vars
-	i := 0
+	i := 0	// this keeps track of the number of vars we've pulled out so we can
+			// offset the now-smaller remaining index since we extract as we go
 	for k, v := range pathVars {
 		if len(pathParts) > (k-i) {
 			queryParams[v] = pathParts[k-i]
@@ -156,7 +159,8 @@ func ParsePathAndQuery (r *http.Request, path string, pathVars map[int]string) (
 	}
 
 	// pull out any vars
-	i := 0
+	i := 0	// this keeps track of the number of vars we've pulled out so we can
+			// offset the now-smaller remaining index since we extract as we go
 	for k, v := range pathVars {
 		if len(pathParts) > (k-i) {
 			queryParams.Add(v, pathParts[k-i])

@@ -39,7 +39,7 @@ import (
 type Collection struct {
 	Parentdb *Db	// the db we are attached to
 	Name     string			// the colleciton name
-	KeyField string			// the database 
+	KeyField string			// the name of the key 
 	Dbc      *mgo.Collection	// the actuall collection
 	C        *cache.Cache		// the cache for this collection
 }
@@ -102,6 +102,7 @@ func (w *Collection) Read (key string, result interface{}) (interface{}, error) 
 	
 }
 
+
 // read directly from the db, bypassing the cache (does not set the cache either)
 // Read is a method that will read the document associated with the supplied key parameter, always fetching from the db.
 // Does not write it to the cache
@@ -131,6 +132,29 @@ func (w *Collection) ReadNoCache (key string, result interface{}) (interface{}, 
 	
 }
 
+
+// WriteRaw
+// Writes the supplied document to the db with the specified key, and also places in the cache under the key
+// Is slightly faster than Write, but requires the caller to specify the correct value of the key.
+// 
+//
+// Parameters:
+//	key string : the key to store the document under
+//	document []byte] : the document to write as a byte array
+//
+// Returns:
+//	error : nil if no error
+//
+func (w *Collection) WriteRaw(key string, document []byte) error {
+
+	_, err := w.Dbc.Upsert(bson.M{w.KeyField: key}, document)
+	if err == nil {
+		d, err2 := bson.Marshal(document)
+		w.C.Set(key, d, cache.DefaultExpiration)
+		err = err2
+	}
+	return err
+}
 // WriteFast
 // Writes the supplied document to the db with the specified key, and also places in the cache under the key
 // Is slightly faster than Write, but requires the caller to specify the correct value of the key.
@@ -158,6 +182,7 @@ func (w *Collection) WriteFast(key string, document interface{}) error {
 	}
 	return err
 }
+
 
 
 // Write
