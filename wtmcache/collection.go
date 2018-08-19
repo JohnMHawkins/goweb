@@ -132,29 +132,6 @@ func (w *Collection) ReadNoCache (key string, result interface{}) (interface{}, 
 	
 }
 
-
-// WriteRaw
-// Writes the supplied document to the db with the specified key, and also places in the cache under the key
-// Is slightly faster than Write, but requires the caller to specify the correct value of the key.
-// 
-//
-// Parameters:
-//	key string : the key to store the document under
-//	document []byte] : the document to write as a byte array
-//
-// Returns:
-//	error : nil if no error
-//
-func (w *Collection) WriteRaw(key string, document []byte) error {
-
-	_, err := w.Dbc.Upsert(bson.M{w.KeyField: key}, document)
-	if err == nil {
-		d, err2 := bson.Marshal(document)
-		w.C.Set(key, d, cache.DefaultExpiration)
-		err = err2
-	}
-	return err
-}
 // WriteFast
 // Writes the supplied document to the db with the specified key, and also places in the cache under the key
 // Is slightly faster than Write, but requires the caller to specify the correct value of the key.
