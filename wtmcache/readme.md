@@ -14,6 +14,9 @@ go get github.com/patrickmn/go-cache
 
 go get gopkg.in/mgo.v2
 
+## TODO
+
+-Allow use of cacheserver instead of inherent cache
 
 
 ## Usage

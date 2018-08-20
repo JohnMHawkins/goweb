@@ -3,6 +3,10 @@ cacheserver
 
 ``cacheserver``` is a Golang http server providing unified cache service.
 
+## TODO 
+ -allow configuration of cache duration parameters
+ -allow storage limits and cache eviction
+
 ## Usage
 
 to put a value to the cache, call:
