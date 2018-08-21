@@ -27,9 +27,12 @@ import (
 	"net/http"
 	"strings"
 	"encoding/json"
+	"math/rand"
 	"jmh/goweb/logger"
 )
- 
+
+const CORRELATION_ID_HEADER = "correlation-id"
+
 // WebHandler is the base interface for all web server types.
 // It only supports the common methods GET and POST.  
 //
@@ -40,15 +43,33 @@ type WebHandler interface {
 	Name() string
 }
 
+func getCorrelationId ( r *http.Request) (string) {
+	h := r.Header.Get(CORRELATION_ID_HEADER)
+	if (len(h) == 0 ) {
+		// create and add one
+		h = fmt.Sprintf("%d", rand.Uint64())
+		r.Header.Add(CORRELATION_ID_HEADER, h)
+	}
+	return h
+}
+
+// formats the request for useful log information
+func formatReqForLog(r *http.Request) (string) {
+	s := fmt.Sprintf("%s %s Headers:{", r.Method, r.URL)
+	for k, v := range r.Header {
+		s += k + ":[" 
+		for _, vv := range v { s += vv + ","}
+		s += "], "
+	}
+	s += "}"
+	return s
+}
 
 
 // root dispatcher called by all WebHandlers to determine Method and dispatch to appropriate case handler
 func DispatchMethod(h WebHandler, w http.ResponseWriter, r *http.Request) {
 
-	// TODO 
-	//	- look for a correlation_id in the header, create one if not already there
-	//	- improve the formatting of the logged request
-	logger.StdLogger.LOG(logger.INFO, "", fmt.Sprintf("Inbound request %s", r), nil)
+	logger.StdLogger.LOG(logger.INFO, getCorrelationId(r), fmt.Sprintf("Inbound request %s", formatReqForLog(r)), nil)
 	
 	switch {
 		case r.Method == "GET":

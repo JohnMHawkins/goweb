@@ -38,7 +38,8 @@ import (
 	"os"
 	"flag"
 //	"time"
-//	"encoding/json"
+	"encoding/json"
+	"io/ioutil"
 //	"math/rand"
 //	"gopkg.in/mgo.v2/bson"
 	"fmt"
@@ -51,6 +52,8 @@ import _ "net/http/pprof"
 // Global instantiations
 
 var cDb *wtmcache.Db					// the db we will use
+
+var httpClient *webber.HttpClient
 
 
 // this is the struct we use for keeping data about our logged in user
@@ -100,6 +103,7 @@ func (h AuthServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 		//var session UserSessionData
 		session := UserSessionData{}
 		bHasSession, sessionKey := webber.GetSession(r, &session)
+
 
 		if ( bHasSession ) {
 			//  log it and write back a page.  
@@ -180,6 +184,7 @@ func (h HikeServer) Handler ( w http.ResponseWriter, r *http.Request) {
 	webber.DispatchMethod(h, w, r);
 }
 
+// fetch information about a hike from our cache server
 func (h HikeServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 	apiPath := r.URL.Path[len(h.basePath):]
 	// api is in the form /api/hike/<hikename>/describe
@@ -187,10 +192,15 @@ func (h HikeServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 	pathVars := map[int]string{0:"hike_name"}
 	pathParts, vars := webber.ParsePathAndQueryFlat(r, apiPath, pathVars )
 
+	url := "http://localhost:8090/api/cache/hikes/hikes/Name/" + vars["hike_name"]
+	resp, rerr := httpClient.Get(url, r)
+	fmt.Println("tried caache server, err=", rerr)
+
+
+
 	hikeInfo := new(HikeInfo)
-	hikeInfo.Name = vars["hike_name"]
-	hikeInfo.Length = len(hikeInfo.Name)  // convenient, the hike is one mile per letter!
-	hikeInfo.Description = "It's a nice hike.  Isn't every hike a nice hike?"
+
+	json.NewDecoder(resp.Body).Decode(hikeInfo)
 
 	if ( len(pathParts) == 0) {
 		// just return the hike info
@@ -209,15 +219,29 @@ func (h HikeServer) HandleGet (w http.ResponseWriter, r *http.Request) {
 	
 }
 
+// take information about a hike and store it to our cache server
 func (h HikeServer) HandlePost (w http.ResponseWriter, r *http.Request) {
-	parseErr := r.ParseForm()
-	if parseErr != nil {
-		logger.StdLogger.LOG(logger.ERROR, "", fmt.Sprintf("HikeServer error parsing POST: %s", parseErr), nil)
-	}
-	//username := r.FormValue("username")
-	//password := r.FormValue("password")
-	http.Error(w, "NYI", http.StatusNotImplemented)
+	apiPath := r.URL.Path[len(h.basePath):]
+	pathParts, _ := webber.ParsePathAndQueryFlat(r, apiPath, nil )
 
+	if (len(pathParts) > 0) {
+		hikename := pathParts[0]
+		body, err := ioutil.ReadAll(r.Body)
+		if ( err == nil ) {
+			url := "http://localhost:8090/api/cache/hikes/hikes/Name/" + hikename
+			resp, rerr := httpClient.Post(url, body, r.Header.Get("Content-Type"), r)
+			if ( rerr == nil) {
+				fmt.Fprintf(w, "%d bytes written", len(body))
+			} else {
+				http.Error(w, rerr.Error(), resp.StatusCode)
+			}
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+	} else {
+		http.Error(w, "no hikename specified", http.StatusBadRequest)
+	}
+					
 }
 
 
@@ -265,6 +289,8 @@ func main() {
 	}
 	cDb = wtmcache.NewDb(dbSession, "tutorial")
 	webber.CreateSessionDbCollection(cDb, config.SessionCollName)
+
+	httpClient = webber.NewHttpClient(nil);
 
 	// create an App Server
 	as := webber.NewAppServer(config)
