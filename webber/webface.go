@@ -53,6 +53,11 @@ func getCorrelationId ( r *http.Request) (string) {
 	return h
 }
 
+func GetCorrelationId ( r *http.Request) (string) {
+	h := r.Header.Get(CORRELATION_ID_HEADER)
+	return h
+}
+
 // formats the request for useful log information
 func formatReqForLog(r *http.Request) (string) {
 	s := fmt.Sprintf("%s %s Headers:{", r.Method, r.URL)

@@ -276,7 +276,7 @@ func main() {
 	// fill out the AppInfo struct so the logger knows who it is writting logs for:
 	app := logger.AppInfo{Name:config.AppName, Version:config.AppVersion, Instance:*AppInstance,Cluster:*AppCluster}
 	fhLogger := logger.NewFirehoseLogger(app, config.AWSRegion, config.AWSProfile, config.LoggerFirehoseDeliveryStream)
-	logger.StdLogger = *fhLogger
+	logger.StdLogger = fhLogger
 	logger.StdLogger.StdOutOn(true)
 	logger.StdLogger.LOG(logger.INFO, "", "WebberTut starting up", nil)
 
